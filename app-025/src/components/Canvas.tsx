@@ -177,12 +177,14 @@ export default function Canvas({ plan, selectedId, onSelect }: Props) {
             </g>
           )}
 
-          {/* 底砂（平面为整片色带；侧视画梯形坡） */}
+          {/* 底砂（平面为整片色带；侧视画梯形坡：前缘=基础厚度，后缘=基础+坡度） */}
           {view === 'side' ? (
             (() => {
-              const baseCm = plan.substrate.thicknessMm / 10;
-              const sandH = toPx(baseCm);
-              const points = `0,${H} 0,${H - sandH} ${W},${H - sandH} ${W},${H}`;
+              const frontCm = Math.min(tank.h, plan.substrate.thicknessMm / 10);
+              const backCm = Math.min(tank.h, (plan.substrate.thicknessMm + plan.substrate.slopeMm) / 10);
+              const frontH = toPx(frontCm);
+              const backH = toPx(backCm);
+              const points = `0,${H} 0,${H - frontH} ${W},${H - backH} ${W},${H}`;
               return <polygon points={points} fill="#c9b18a" data-testid="substrate-side" />;
             })()
           ) : (
