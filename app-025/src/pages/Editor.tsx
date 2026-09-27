@@ -182,7 +182,10 @@ export default function Editor({ plan }: { plan: Plan }) {
                 data-testid="sub-kind"
                 value={plan.substrate.kind}
                 onChange={(e) => {
-                  patchSub({ kind: e.target.value as Plan['substrate']['kind'] });
+                  const kind = e.target.value as Plan['substrate']['kind'];
+                  const preset = SUBSTRATES.find((s) => s.kind === kind);
+                  // 换类型时密度跟随该材质预设值（仍可手动微调）
+                  patchSub(preset ? { kind, densityKgPerL: preset.densityKgPerL } : { kind });
                 }}
               >
                 {SUBSTRATES.map((s) => (
@@ -207,8 +210,8 @@ export default function Editor({ plan }: { plan: Plan }) {
             />
             <NumField
               label="坡度 mm"
-              value={plan.substrate.thicknessMm}
-              onChange={(v) => patchSub({ thicknessMm: v })}
+              value={plan.substrate.slopeMm}
+              onChange={(v) => patchSub({ slopeMm: v })}
               testid="sub-slope"
             />
           </div>

@@ -90,6 +90,62 @@ describe('造景编辑器', () => {
     expect(after).toContain('底砂体积');
   });
 
+  it('切换底砂类型时密度跟随预设，同厚度下砂与泥重量不同', async () => {
+    await seedPlanAndOpenEditor();
+    render(<App />);
+    await screen.findByTestId('editor');
+    // 默认水草泥 1.05
+    expect((screen.getByTestId('sub-density') as HTMLInputElement).value).toBe('1.05');
+    const kgOf = () => Number(screen.getByTestId('volume-summary').textContent!.match(/（([\d.]+)kg）/)![1]);
+    const kgSoil = kgOf();
+    // 切到河沙 → 密度跟到 1.6，同厚度重量按密度比变化
+    await userEvent.selectOptions(screen.getByTestId('sub-kind'), 'sand');
+    expect((screen.getByTestId('sub-density') as HTMLInputElement).value).toBe('1.6');
+    const kgSand = kgOf();
+    expect(kgSand).not.toBe(kgSoil);
+    expect(kgSand / kgSoil).toBeCloseTo(1.6 / 1.05, 1);
+  });
+
+  it('坡度与基础厚度各自独立：改坡度不动厚度，且计入体积', async () => {
+    await seedPlanAndOpenEditor();
+    render(<App />);
+    await screen.findByTestId('editor');
+    const thick = screen.getByTestId('sub-thickness') as HTMLInputElement;
+    const slope = screen.getByTestId('sub-slope') as HTMLInputElement;
+    // 坡度栏回显坡度（默认 60），不再与厚度（50）相同
+    expect(thick.value).toBe('50');
+    expect(slope.value).toBe('60');
+    const before = screen.getByTestId('volume-summary').textContent!;
+    await userEvent.clear(slope);
+    await userEvent.type(slope, '150');
+    // 厚度未被牵连，体积因坡度变化
+    expect((screen.getByTestId('sub-thickness') as HTMLInputElement).value).toBe('50');
+    expect((screen.getByTestId('sub-slope') as HTMLInputElement).value).toBe('150');
+    expect(screen.getByTestId('volume-summary').textContent!).not.toBe(before);
+  });
+
+  it('侧视图按基础厚度+坡度画出斜边（前后缘高度不同）', async () => {
+    await seedPlanAndOpenEditor();
+    render(<App />);
+    await screen.findByTestId('editor');
+    await userEvent.click(screen.getByTestId('view-side'));
+    const pts = screen
+      .getByTestId('substrate-side')
+      .getAttribute('points')!
+      .split(' ')
+      .map((p) => p.split(',').map(Number));
+    // 四边形顶点：左下 左上(前缘) 右上(后缘) 右下
+    const frontTopY = pts[1][1];
+    const backTopY = pts[2][1];
+    expect(frontTopY).not.toBe(backTopY);
+    // 前低后高：后缘顶点 y 更小（更高）
+    expect(backTopY).toBeLessThan(frontTopY);
+    // 高差 = 坡度 60mm = 6cm × 比例尺（由 viewBox 高度 / 缸高 45cm 推出）
+    const viewBox = screen.getByTestId('canvas').getAttribute('viewBox')!.split(' ').map(Number);
+    const pxPerCm = viewBox[3] / 45;
+    expect(frontTopY - backTopY).toBeCloseTo(6 * pxPerCm, 1);
+  });
+
   it('前景草被高后景素材遮挡时出现提示', async () => {
     const plan = newPlan('遮挡测试');
     upsertPlan({

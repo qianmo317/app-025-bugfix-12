@@ -180,9 +180,12 @@ export default function Canvas({ plan, selectedId, onSelect }: Props) {
           {/* 底砂（平面为整片色带；侧视画梯形坡） */}
           {view === 'side' ? (
             (() => {
-              const baseCm = plan.substrate.thicknessMm / 10;
-              const sandH = toPx(baseCm);
-              const points = `0,${H} 0,${H - sandH} ${W},${H - sandH} ${W},${H}`;
+              // 前低后高：前缘 = 基础厚度，后缘 = 基础厚度 + 坡度
+              const frontCm = plan.substrate.thicknessMm / 10;
+              const backCm = (plan.substrate.thicknessMm + plan.substrate.slopeMm) / 10;
+              const frontH = toPx(Math.min(frontCm, tank.h));
+              const backH = toPx(Math.min(backCm, tank.h));
+              const points = `0,${H} 0,${H - frontH} ${W},${H - backH} ${W},${H}`;
               return <polygon points={points} fill="#c9b18a" data-testid="substrate-side" />;
             })()
           ) : (
